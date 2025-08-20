@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <link rel="stylesheet"
+        href="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.11.1/build/styles/monokai.min.css">
+    <script src="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.11.1/build/highlight.min.js"></script>
+
+    <link rel="stylesheet" href="./sample.html.css">
+
+    <title>Post1 page title</title>
+</head>
+
+<body>
+    <div class="content">
+        <div class="info">
+            <a href="/" class="back-to-home">Back to home</a>
+            <div class="post-date">2023-10-01</div>
+        </div>
+
+        <h1 class="post-title">Hello post1!!</h1>
+
+        <div class="post-article">
+
+            <p class="post-text">Lorem ipsum dolor sit amet consectetur adipisicing elit. Nostrum consequuntur itaque
+                pariatur ullam
+                minima inventore nulla ut dignissimos asperiores nihil, vero fuga, nobis labore sunt magni sapiente
+                neque ad tenetur.</p>
+
+            <a href="https://example.com" class="post-link">Embed link</a>
+
+            <p class="post-text">Lorem <span class="post-text-underline">dolor sit amet consectetur</span> adipisicing
+                elit. Nostrum consequuntur itaque
+                pariatur ullam
+                minima <span class="post-inline-code">nulla</span> ut <span class="post-text-bold">asperiores</span>
+                nihil, vero fuga, nobis
+                labore sunt magni sapiente
+                neque ad tenetur.</p>
+
+            <img src="https://placehold.jp/1270x760.png" alt="Sample image" class="post-image">
+
+            <pre>
+                <code>
+// Example C# code snippet
+using System;
+namespace HelloWorld
+{
+    class Program
+    {
+        static void Main(string[] args)
+        {
+            Console.WriteLine("Hello, World!");
+        }
+    }
+}
+                </code>
+            </pre>
+
+            <ul class="dot-list">
+                <li>List item 1</li>
+                <li>List item 2</li>
+                <li>List item 3</li>
+            </ul>
+
+            <ol class="numbered-list">
+                <li>Numbered item 1</li>
+                <li>Numbered item 2</li>
+                <li>Numbered item 3</li>
+            </ol>
+        </div>
+    </div>
+</body>
+
+<script>
+    document.addEventListener("DOMContentLoaded", function () {
+        hljs.highlightAll();
+    });
+</script>
+
+</html>
