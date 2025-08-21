@@ -1,15 +1,9 @@
 const data = [
     {
-        "post-name": "日本語の長いタイトルの投稿",
-        "post-short": "This is a short description of Post 1.",
-        "link": "./posts/post1.html",
-        "created-at": "2023-10-01",
-    },
-    {
-        "post-name": "The loonget post ever",
-        "post-short": "This is a short description of Post 2.",
-        "link": "./posts/post2.html",
-        "created-at": "2023-10-02",
+        "post-name": "私について",
+        "post-short": "KaRU3とは誰か？を紹介している記事です。",
+        "link": "./posts/1-about-me.html",
+        "created-at": "2025-08-21",
     }
 ];
 
