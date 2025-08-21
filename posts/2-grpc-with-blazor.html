@@ -28,8 +28,16 @@
 
         <div class="post-article">
             <p class="post-text">
-                この記事では、gRPCクライアントをBlazorページに埋め込む方法について説明します。
+                この記事では、gRPCクライアントをBlazorページに埋め込む方法について説明します。なぜ、このようなことをするのかというと、私が授業で開発しているチャットアプリでAPIサーバーをはじめとする全ての分散システムが通信の効率化を目的としてgRPCを利用しており、ユーザーインターフェースを提供するBlazorアプリケーションでもgRPCを利用したいと考えたからです。それでは、具体的な手順を見ていきましょう。
             </p>
+
+            <div class="post-tips-warn">
+                <h2 class="post-tips-title">Warning</h2>
+                <p class="post-tips-text">
+                    gRPCクライアントのフル機能を利用するには、BlazorServerもしくは.NET
+                    MAUIを使用する必要があります。この記事では、BlazorServerを前提に説明します。
+                </p>
+            </div>
 
             <hr class="post-divider">
 
