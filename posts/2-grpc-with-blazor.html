@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <link rel="stylesheet"
+        href="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.11.1/build/styles/monokai.min.css">
+    <script src="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.11.1/build/highlight.min.js"></script>
+
+    <link rel="stylesheet" href="./sample.html.css">
+
+    <title>BlazorページにgRPCクライアントを埋め込む</title>
+    <link rel="icon"
+        href="https://media.githubusercontent.com/media/KaRU3-dev/KaRU3-dev.github.io/7aa1bad9e0e5cbc49dcd5bc4fa9427ef8738d553/assets/Webicon-1.png"
+        type="image/png">
+</head>
+
+<body>
+    <div class="content">
+        <div class="info">
+            <a href="/" class="back-to-home">Back to home</a>
+            <div class="post-date">2025-08-21</div>
+        </div>
+
+        <h1 class="post-title">BlazorページにgRPCクライアントを埋め込む</h1>
+
+        <div class="post-article">
+            <p class="post-text">
+                この記事では、gRPCクライアントをBlazorページに埋め込む方法について説明します。
+            </p>
+
+            <hr class="post-divider">
+
+            <p class="post-text-bold">
+                目次
+            </p>
+            <ol class="post-numbered-list">
+                <li class="post-text"><a href="#1">gRPCサービスの定義</a></li>
+                <li class="post-text"><a href="#2">Blazorページへの埋め込み</a></li>
+            </ol>
+
+            <hr class="post-divider">
+
+            <h2 id="1" class="post-subtitle">1. gRPCサービスの定義</h2>
+            <p class="post-text">
+                gRPCクライアントを作成するには、まずgRPCサービスを定義する必要があります。以下は、gRPCサービスの定義例です。
+            </p>
+            <p class="post-inline-code">sample_service.proto</p>
+            <pre>
+                <code>
+syntax = "proto3";
+package example;
+service ExampleService {
+    rpc GetExampleData(ExampleRequest) returns (ExampleResponse);
+}
+message ExampleRequest {
+    string requestData = 1;
+}
+message ExampleResponse {
+    string responseData = 1;
+}
+                </code>
+            </pre>
+            <p class="post-inline-code">GrpcServer.csproj</p>
+            <pre>
+                <code>
+&lt;Protobuf Include="sample_service.proto" GrpcServices="Server" /&gt;
+                </code>
+            </pre>
+            <p class="post-inline-code">SampleServiceImpl.cs</p>
+            <pre>
+                <code>
+using Grpc.Core;
+using System.Threading.Tasks;
+namespace ExampleService;
+public class ExampleServiceImpl : ExampleService.ExampleServiceBase
+{
+    public override Task<ExampleResponse> GetExampleData(ExampleRequest request, ServerCallContext context)
+    {
+        var response = new ExampleResponse
+        {
+            ResponseData = $"Received: {request.RequestData}"
+        };
+        return Task.FromResult(response);
+    }
+}
+                </code>
+            </pre>
+            <p class="post-text">
+                上記のコードでは、gRPCサービスを定義し、リクエストを受け取ってレスポンスを返すメソッドを実装しています。詳しい手順については、<a
+                    href="https://learn.microsoft.com/ja-jp/aspnet/core/grpc/basics?view=aspnetcore-9.0"
+                    class="post-link">こちら</a>を参照してください。
+            </p>
+
+            <hr class="post-divider">
+
+            <h2 id="2" class="post-subtitle">2. Blazorページへの埋め込み</h2>
+            <p class="post-text">
+                gRPCクライアントをBlazorページに埋め込むには、以下の手順を実行します。
+            </p>
+            <p class="post-text-bold">1. gRPCクライアントの作成</p>
+            <p class="post-text">まず、以下のコマンドをPowerShellなどのコマンドラインツールを使って実行して、必要パッケージをインストールします。</p>
+            <pre>
+                <code>
+dotnet add package Grpc.Net.Client
+dotnet add package Grpc.Tools
+dotnet add package Grpc.Reflection
+                </code>
+            </pre>
+            <p class="post-text">
+                次に、sample_service.protoを.csporjに追加します。この時、GrpcServiceをClientに設定することを忘れないでください。これで、gRPCクライアントがプロジェクトに読み込まれました。
+            </p>
+            <pre>
+                <code>
+&lt;ItemGroup&gt;
+    &lt;Protobuf Include="sample_service.proto" GrpcServices="Client" /&gt;
+&lt;/ItemGroup&gt;
+                </code>
+            </pre>
+            <p class="post-text-bold">2. gRPCクライアントのDI</p>
+            <p class="post-text">BlazorプロジェクトのProgram.csに次のように追記します。</p>
+            <pre>
+                <code>
+builder.Services.AddGrpcClient&lt;ExampleService.ExampleServiceClient&gt;(options =>
+{
+    options.Address = new Uri("https://localhost:5001"); // gRPCサーバーのURLを指定
+});
+                </code>
+            </pre>
+            <p class="post-text">
+                これで、gRPCクライアントが依存性注入（DI）コンテナに登録されました。Blazorコンポーネントで使用できるようになります。
+            </p>
+            <p class="post-text-bold">3. Blazorコンポーネントでの使用</p>
+            <p class="post-text">
+                BlazorコンポーネントでgRPCクライアントを使用するには、以下のようにします。
+            </p>
+            <pre>
+                <code>
+@page "/example"
+@inject ExampleService.ExampleServiceClient ExampleServiceClient
+
+&lt;h3&gt;gRPC Example&lt;/h3&gt;
+&lt;button @onclick="CallGrpcService"&gt;Call gRPC Service&lt;/button&gt;
+@if (responseData != null)
+{
+    &lt;p&gt;Response: @responseData&lt;/p&gt;
+}
+
+@code {
+    private string responseData;
+
+    private async Task CallGrpcService()
+    {
+        var request = new ExampleRequest { RequestData = "Hello gRPC" };
+        var response = await ExampleServiceClient.GetExampleDataAsync(request);
+        responseData = response.ResponseData;
+    }
+}
+                </code>
+            </pre>
+            <p class="post-text">
+                上記のコードでは、gRPCクライアントを注入し、ボタンをクリックするとgRPCサービスを呼び出してレスポンスを取得します。BlazorコンポーネントのUIは、<code>responseData</code>に基づいて更新されます。
+            </p>
+
+            <hr class="post-divider">
+
+            <h2 class="post-subtitle">まとめ</h2>
+            <p class="post-text">
+                この記事では、gRPCクライアントをBlazorページに埋め込む方法について説明しました。gRPCサービスを定義し、Blazorコンポーネントで使用することで、リアルタイムな通信が可能になります。gRPCは、効率的な通信を提供し、Blazorアプリケーションにおいても強力なツールとなります。ぜひ、プロジェクトに取り入れてみてください。
+            </p>
+        </div>
+
+        <hr class="post-divider">
+        <div class="post-footer">
+            <p class="post-footer-text">Copyright (C) 2025 KaRU3, Okumura Naofumi</p>
+        </div>
+    </div>
+</body>
+
+<script>
+    document.addEventListener("DOMContentLoaded", function () {
+        hljs.highlightAll();
+    });
+</script>
+
+</html>

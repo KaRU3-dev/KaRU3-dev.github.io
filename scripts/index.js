@@ -4,7 +4,13 @@ const data = [
         "post-short": "KaRU3とは誰か？を紹介している記事です。",
         "link": "./posts/1-about-me.html",
         "created-at": "2025-08-21",
-    }
+    },
+    {
+        "post-name": "BlazorページにgRPCクライアントを埋め込む",
+        "post-short": "BlazorページにgRPCクライアントを埋め込む方法を紹介しています。",
+        "link": "./posts/2-grpc-with-blazor.html",
+        "created-at": "2025-08-21",
+    },
 ];
 
 window.onload = function () {
