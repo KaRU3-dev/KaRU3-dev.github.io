@@ -11,6 +11,18 @@ const data = [
         "link": "./posts/2-grpc-with-blazor.html",
         "created-at": "2025-08-21",
     },
+    {
+        "post-name": "分散サービス上でのgRPC認証",
+        "post-short": "ASP.NET CoreでgRPC認証ハンドラを作成する方法を紹介しています。",
+        "link": "./posts/3-grpc-auth.html",
+        "created-at": "2025-08-22",
+    },
+    {
+        "post-name": "ASP.NET Coreのデバッグ用のSSL(HTTPS)の有効化",
+        "post-short": "ASP.NET Coreで自己署名証明書を生成する方法を紹介しています。",
+        "link": "./posts/4-debug-ssl.html",
+        "created-at": "2025-08-24",
+    }
 ];
 
 window.onload = function () {

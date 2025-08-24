@@ -21,7 +21,7 @@
     <div class="content">
         <div class="info">
             <a href="/" class="back-to-home">Back to home</a>
-            <div class="post-date">2023-10-01</div>
+            <div class="post-date">2025-08-22</div>
         </div>
 
         <h1 class="post-title">分散サービス上でのgRPC認証</h1>
@@ -94,7 +94,7 @@ public class AuthHandler(
 
     // Verify token
     try {
-      var res = await _yourAuthGrpcClient.AuthAsync(new V0SessionData {
+      var res = await _yourAuthGrpcClient.AuthAsync(new AuthRequest {
         SessionId = sessionId.ToString(),
         Token = accessToken,
       });
