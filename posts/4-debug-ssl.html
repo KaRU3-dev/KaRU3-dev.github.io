@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <link rel="stylesheet"
+        href="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.11.1/build/styles/monokai.min.css">
+    <script src="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.11.1/build/highlight.min.js"></script>
+
+    <link rel="stylesheet" href="./sample.html.css">
+
+    <title>ASP.NET Coreのデバッグ用のSSL(HTTPS)の有効化</title>
+    <link rel="icon"
+        href="https://media.githubusercontent.com/media/KaRU3-dev/KaRU3-dev.github.io/7aa1bad9e0e5cbc49dcd5bc4fa9427ef8738d553/assets/Webicon-1.png"
+        type="image/png">
+</head>
+
+<body>
+    <div class="content">
+        <div class="info">
+            <a href="/" class="back-to-home">Back to home</a>
+            <div class="post-date">2025-08-24</div>
+        </div>
+
+        <h1 class="post-title">ASP.NET Coreのデバッグ用のSSL(HTTPS)の有効化</h1>
+
+        <div class="post-article">
+            <p class="post-text-bold">目次</p>
+            <ol class="post-numbered-list">
+                <li><a href="#1" class="post-link">はじめに</a></li>
+                <li><a href="#2" class="post-link">Docker + opensslでpfxファイルを生成</a></li>
+                <li><a href="#3" class="post-link">ASP.NET Coreで有効化</a></li>
+                <li><a href="#4" class="post-link">まとめ</a></li>
+            </ol>
+
+            <hr class="post-divider">
+
+            <h2 id="1" class="post-text">1. はじめに</h2>
+            <p class="post-text">この記事では、Windows上でデバッグ用の証明書を発行して利用する方法を紹介しています。利用する技術は<span
+                    class="post-inline-code">ASP.NET Core</span>、<span class="post-inline-code">Docker</span>、<span
+                    class="post-inline-code">openssl</span>です。</p>
+
+            <div class="post-tips-caution">
+                <h2 class="post-tips-title">Caution</h2>
+                <p class="post-tips-text">この記事で作成される証明書は本番環境では利用できません。</p>
+            </div>
+
+            <hr class="post-divider">
+
+            <h2 id="2" class="post-text">2. Docker + opensslでpfxファイルを生成</h2>
+            <p class="post-text">まず、コンテナを作成するために<span class="post-inline-code">Dockerfile</span>と関連ファイルを作成します。</p>
+            <p class="post-inline-code">Dockerfile</p>
+            <pre>
+                <code>FROM ubuntu:24.04
+
+# Install openssl
+RUN apt-get update &&\
+    apt-get install -y openssl &&\
+    # Clear apt cache
+    rm -rf /var/lib/apt/lists/*
+
+# Create and change working directory
+WORKDIR /ssl
+
+# Copy entrypoint script
+COPY ./docker-init.bash /
+                </code>
+            </pre>
+            <p class="post-inline-code">Dockerfile</p>
+            <pre>
+                <code>#!/bin/bash
+
+# Generate dev cert for localhost
+mkdir -p /ssl
+openssl req \
+  -x509 -nodes -days 365 \
+  -newkey rsa:2048 \
+  -keyout /ssl/dev.key -out /ssl/dev.crt \
+  -subj '/CN=localhost'
+
+# Generate pfx file for Windows
+openssl pkcs12 \
+  -export -out /ssl/dev.pfx \
+  -inkey /ssl/dev.key -in /ssl/dev.crt \
+  -passout pass:"${PFX_PASSWORD}"
+                </code>
+            </pre>
+            <p class="post-inline-code">docker-compose.yml</p>
+            <pre>
+                <code>services:
+  ssl-gen:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: ssl-gen
+    environment:
+      - PFX_PASSWORD=CHANGE_THIS_PASSWORD
+    volumes:
+      - ./certs:/ssl
+    command: [ "bash", "/docker-init.bash"]
+    restart: "no"
+    networks:
+      - ssl-network
+
+networks:
+  ssl-network:
+    driver: bridge
+
+                </code>
+            </pre>
+            <p class="post-text">上記のファイルを作成したら、以下のコマンドでコンテナを起動します。</p>
+            <p class="post-inline-code">docker-compose up --build</p>
+            <p class="post-text">実行が完了すると、<span class="post-inline-code">certs</span>フォルダに<span
+                    class="post-inline-code">dev.pfx</span>ファイルが生成されます。</p>
+
+            <hr class="post-divider">
+
+            <h2 id="3" class="post-text">3. ASP.NET Coreで有効化</h2>
+            <p class="post-text">お使いのASP.NET Coreのwebapiなどのプロジェクトで、エントリーポイントで次のように編集します。</p>
+            <p class="post-inline-code">Program.cs</p>
+            <pre>
+                <code>...
+
+var builder = WebApplication.CreateBuilder(args);
+
+builder.WebHost.ConfigureKestrel(options =>
+{
+    options.ListenLocalhost(CHANGE_THIS_PORT_INT, o =>
+    {
+        o.UseHttps("./path/to/certs/dev.pfx", "CHANGE_THIS_PASSWORD");
+    });
+});
+
+...
+                </code>
+            </pre>
+            <p class="post-text">上記のように設定したら、プロジェクトを実行します。<span
+                    class="post-inline-code">https://localhost:CHANGE_THIS_PORT_INT</span>などにアクセスして、SSLが有効になっていることを確認してください。かなりひどい警告付きでアクセスできるはずです。
+            </p>
+
+            <hr class="post-divider">
+
+            <h2 id="4" class="post-text">4. まとめ</h2>
+
+            <p class="post-text">この記事では、Windows上でデバッグ用のSSL(HTTPS)を有効化する方法を紹介しました。Dockerとopensslを利用して証明書を生成し、ASP.NET
+                Coreで利用する手順を説明しました。これにより、ローカル環境でHTTPSを利用した開発が可能になります。</p>
+        </div>
+
+        <hr class="post-divider">
+        <div class="post-footer">
+            <p class="post-footer-text">Copyright (C) 2025 KaRU3, Okumura Naofumi | <a
+                    href="https://github.com/KaRU3-dev/KaRU3-dev.github.io/issues/new" class="post-link">Send issue</a>
+            </p>
+        </div>
+    </div>
+</body>
+
+<script>
+    document.addEventListener("DOMContentLoaded", function () {
+        hljs.highlightAll();
+    });
+</script>
+
+</html>
