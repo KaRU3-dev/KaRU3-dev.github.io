@@ -22,6 +22,12 @@ const data = [
         "post-short": "ASP.NET Coreで自己署名証明書を生成する方法を紹介しています。",
         "link": "./posts/4-debug-ssl.html",
         "created-at": "2025-08-24",
+    },
+    {
+        "post-name": "ReactをBlazorで利用する",
+        "post-short": "BlazorアプリケーションでReactコンポーネントを使用する方法を紹介しています。",
+        "link": "./posts/5-blazor-with-react.html",
+        "created-at": "2025-08-24",
     }
 ];
 

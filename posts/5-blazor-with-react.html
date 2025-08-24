@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <link rel="stylesheet"
+        href="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.11.1/build/styles/monokai.min.css">
+    <script src="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.11.1/build/highlight.min.js"></script>
+
+    <link rel="stylesheet" href="./sample.html.css">
+
+    <title>ReactをBlazorで利用する</title>
+    <link rel="icon"
+        href="https://media.githubusercontent.com/media/KaRU3-dev/KaRU3-dev.github.io/7aa1bad9e0e5cbc49dcd5bc4fa9427ef8738d553/assets/Webicon-1.png"
+        type="image/png">
+</head>
+
+<body>
+    <div class="content">
+        <div class="info">
+            <a href="/" class="back-to-home">Back to home</a>
+            <div class="post-date">2025-08-24</div>
+        </div>
+
+        <h1 class="post-title">ReactをBlazorで利用する</h1>
+
+        <div class="post-article">
+            <p class="post-bold">目次</p>
+            <ul class="post-toc">
+                <li><a href="#1" class="post-link">はじめに</a></li>
+                <li><a href="#2" class="post-link">Blazorプロジェクトの作成</a></li>
+                <li><a href="#3" class="post-link">JavaScriptのセットアップ</a></li>
+                <li><a href="#4" class="post-link">Reactコンポーネントの統合</a></li>
+                <li><a href="#5" class="post-link">まとめ</a></li>
+            </ul>
+
+            <hr class="post-divider">
+
+            <h2 id="1" class="post-subtitle">1. はじめに</h2>
+            <p class="post-text">
+                この記事では、Blazorに対してJavaScriptやReactDOMを追加することができます。
+                なぜこれが必要なのでしょうか？BlazorはC#のみでウェブサイトを構築することができるフレームワークですが、やはりJavaScriptのエコシステムには多くの便利なライブラリやツールが存在し、C#では再現が困難な機能がたくさんあります。
+                その中でも特に人気のあるReactをBlazorアプリケーションに統合する方法について説明します。
+            </p>
+
+            <hr class="post-divider">
+
+            <h2 id="2" class="post-subtitle">2. Blazorプロジェクトの作成</h2>
+            <p class="post-text">以下のコマンドを実行し、Blazorプロジェクトを作成します（プロジェクト用のフォルダ内で実行してください）。</p>
+            <pre>
+                <code>
+dotnet new sln
+dotnet new blazor
+dotnet sln add .
+                </code>
+            </pre>
+
+            <hr class="post-divider">
+
+            <h2 id="3" class="post-subtitle">3. JavaScriptのセットアップ</h2>
+            <p class="post-text">以下のコマンドを実行し、JavaScriptをセットアップします。</p>
+            <pre>
+                <code>
+npm install --save-dev react react-dom \
+                       webpack webpack-cli \
+                       babel-loader style-loader css-loader \
+                       @babel/core @babel/preset-env @babel/preset-react
+                </code>
+            </pre>
+            <p class="post-text"><span class="post-inline-code">package.json</span>に以下のコードを追加し、トランスパイルスクリプトをセットアップします。
+            </p>
+            <pre>
+                <code>
+"scripts": {
+    "build": "webpack --config ./webpack.config.cjs",
+    "build:watch": "webpack --config --watch ./webpack.config.cjs"
+},
+                </code>
+            </pre>
+            <p class="post-text">プロジェクトのルートに<span class="post-inline-code">webpack.config.cjs</span>を作成し、以下のコードを追加します。
+            </p>
+            <pre>
+                <code>
+const path = require('path');
+
+module.exports = {
+    entry: './index.js',
+    output: {
+        filename: 'bundle.js',
+        chunkFilename: '[name].[contenthash].chunk.js',
+        path: path.resolve(__dirname, 'wwwroot/js'),
+        clean: true,
+    },
+    mode: 'production',
+    module: {
+        rules: [
+            {
+                test: /\.jsx?$/,
+                exclude: /node_modules/,
+                use: {
+                    loader: 'babel-loader',
+                    options: {
+                        presets: ['@babel/preset-react'],
+                    },
+                },
+            },
+            {
+                test: /\.css?$/,
+                use: ['style-loader', 'css-loader'],
+            }
+        ],
+    },
+    resolve: {
+        extensions: ['.js', '.jsx', '.css'],
+    },
+}
+                </code>
+            </pre>
+            <p class="post-text">プロジェクトに次のJSファイルを作成してください。</p>
+            <p class="post-inline-code">index.js</p>
+            <pre>
+                <code>
+import React, { lazy } from "react";
+import ReactDOM from "react-dom/client";
+
+console.log("React component loaded");
+
+window.AttachReactComponent = (elName) => {
+    const el = document.getElementById(elName);
+
+    const root = ReactDOM.createRoot(el);
+    const App = lazy(() => import("./.libs/js/App"));
+    root.render(
+        &lt;React.Suspense fallback={&lt;div&gt;Loading...&lt;/div&gt;}&gt;
+            &lt;App /&gt;
+        &lt;/React.Suspense&gt;
+    );
+    // For debugging purposes
+    el.__reactRoot__ = root;
+}
+                </code>
+            </pre>
+            <p class="post-inline-code">.libs/js/App.jsx</p>
+            <pre>
+                <code>
+import React from "react";
+
+export default function App() {
+    return (
+        &lt;div&gt;
+            &lt;h1&gt;Hello from React!&lt;/h1&gt;
+            &lt;p&gt;This is a React component embedded in a Blazor app.&lt;/p&gt;
+        &lt;/div&gt;
+    );
+}
+                </code>
+            </pre>
+            <p class="post-text">次に、以下のコマンドを実行して、JavaScriptをビルドします。このコマンドにより、<span
+                    class="post-inline-code">./wwwroot/js</span>に<span
+                    class="post-inline-code">bundle.js</span>とチャンクファイルが生成されます。</p>
+            <pre>
+                <code>
+npm run build
+                </code>
+            </pre>
+
+            <hr class="post-divider">
+
+            <h2 id="4" class="post-subtitle">4. Reactコンポーネントの統合</h2>
+            <p class="post-text">先ほど生成した<span class="post-inline-code">./wwwroot/js/bundle.js</span>を<span
+                    class="post-inline-code">./Components/App.razor</span>に追加します。</p>
+            <pre>
+                <code>
+&lt;body&gt;
+    ...
+    &lt;script src="@Assets["js/bundle.js"]"&gt;&lt;/script&gt;
+&lt;/body&gt;
+                </code>
+            </pre>
+            <p class="post-text">次に、<span class="post-inline-code">./Components/Pages/Home.razor</span>に以下のコードを追加します。
+            </p>
+            <pre>
+                <code>
+...
+@inject IJSRuntime JSRuntime
+
+...
+
+&lt;div id="reactApp"&gt;&lt;/div&gt;
+
+@code {
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await RenderAsync();
+        }
+    }
+
+    public async Task RenderAsync()
+    {
+        await JSRuntime.InvokeVoidAsync("AttachReactComponent", "reactApp");
+    }
+}
+                </code>
+            </pre>
+            <p class="post-text">これで、BlazorアプリケーションにReactコンポーネントが統合されました。アプリケーションを実行すると、Reactコンポーネントが表示されるはずです。</p>
+            <div class="post-tips-warn">
+                <h2 class="post-tips-title">Warning</h2>
+                <p class="post-tips-text"><span class="post-inline-code">OnInitialized</span>関数では<span
+                        class="post-inline-code">JSRuntime</span>は実行できません。必ず、レンダリング中もしくはレンダリング後に実行してください。</p>
+            </div>
+
+            <hr class="post-divider">
+
+            <h2 id="5" class="post-subtitle">5. まとめ</h2>
+            <p class="post-text">
+                この記事では、BlazorアプリケーションにJavaScriptとReactを統合する方法について説明しました。これにより、Blazorの強力なC#機能とJavaScriptの豊富なエコシステムを組み合わせて、より柔軟で機能的なウェブアプリケーションを構築することができます。
+            </p>
+            <p class="post-text">ぜひ、この方法を試してみてください！</p>
+
+        </div>
+
+        <hr class="post-divider">
+        <div class="post-footer">
+            <p class="post-footer-text">Copyright (C) 2025 KaRU3, Okumura Naofumi | <a
+                    href="https://github.com/KaRU3-dev/KaRU3-dev.github.io/issues/new" class="post-link">Send issue</a>
+            </p>
+        </div>
+    </div>
+</body>
+
+<script>
+    document.addEventListener("DOMContentLoaded", function () {
+        hljs.highlightAll();
+    });
+</script>
+
+</html>
