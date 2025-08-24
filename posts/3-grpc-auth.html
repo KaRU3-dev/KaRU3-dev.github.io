@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <link rel="stylesheet"
+        href="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.11.1/build/styles/monokai.min.css">
+    <script src="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.11.1/build/highlight.min.js"></script>
+
+    <link rel="stylesheet" href="./sample.html.css">
+
+    <title>分散サービス上でのgRPC認証</title>
+    <link rel="icon"
+        href="https://media.githubusercontent.com/media/KaRU3-dev/KaRU3-dev.github.io/7aa1bad9e0e5cbc49dcd5bc4fa9427ef8738d553/assets/Webicon-1.png"
+        type="image/png">
+</head>
+
+<body>
+    <div class="content">
+        <div class="info">
+            <a href="/" class="back-to-home">Back to home</a>
+            <div class="post-date">2023-10-01</div>
+        </div>
+
+        <h1 class="post-title">分散サービス上でのgRPC認証</h1>
+
+        <div class="post-article">
+            <p class="post-text">
+                この記事では、以下のような分散サービス上でのgRPC認証について説明します。
+            </p>
+            <ul class="post-dot-list">
+                <li>gRPCサービスは、APIとAuthに分かれており、それぞれが別ドメインで動いているものとします</li>
+                <li>APIサービスは、gRPCサービスを提供するサーバーであり、Authサービスは、認証を行うサーバーです</li>
+                <li>Authサービスは、APIサービスがクライアントを信頼するための情報を発行します</li>
+            </ul>
+            <p class="post-text">
+                なぜ、このようなことをするのかというと、私が授業で開発しているチャットアプリで認証サーバーを切り離して運用し、たとえチャットアプリのサーバーがダウンしても、認証サーバーは動き続けるようにしたいと考えたからです。それでは、具体的な方法を見ていきましょう。
+            </p>
+
+            <hr class="post-divider">
+
+            <p class="post-text-bold">
+                目次
+            </p>
+            <ol class="post-numbered-list">
+                <li class="post-text"><a href="#1" class="post-link">認証サーバーの実装</a></li>
+                <li class="post-text"><a href="#2" class="post-link">APIサーバーの実装</a></li>
+                <li class="post-text"><a href="#3" class="post-link">クライアントの実装</a></li>
+            </ol>
+
+            <hr class="post-divider">
+
+            <h2 id="1" class="post-subtitle">1. 認証サーバーの実装</h2>
+            <p class="post-text">
+                実装といっても、皆さんの設計思想はそれぞれ異なるので、割愛します。ただしクライアントから送信するデータは、<span
+                    class="post-inline-code">session-id</span>と<span
+                    class="post-inline-code">token</span>です。どちらもgRPCのメタデータ（ヘッダ）に含まれているものとします。
+            </p>
+
+            <hr class="post-divider">
+
+            <h2 id="2" class="post-subtitle">2. APIサーバーの実装</h2>
+            <p class="post-text">ここでは、どのようにして認証サーバーへ認証情報を送るのかをまとめます。</p>
+            <p class="post-text-bold">認証ハンドラの作成</p>
+            <p class="post-text">APIサーバーに認証ハンドラを作成します。</p>
+            <p class="post-inline-code">AuthHandler.cs</p>
+            <pre>
+                <code>
+public class AuthHandler(
+  IOptionsMonitor&lt;AuthenticationSchemeOptions&gt; options,
+  ILoggerFactory logger,
+  UrlEncoder encoder,
+  YourAuthGrpc.YourAuthGrpcClient yourAuthGrpcClient
+) : AuthenticationHandler&lt;AuthenticationSchemeOptions&gt;(
+  options,
+  logger,
+  encoder
+) {
+  private readonly YourAuthGrpc.YourAuthGrpcClient _yourAuthGrpcClient = yourAuthGrpcClient;
+
+  protected override async Task&lt;AuthenticateResult&gt; HandleAuthenticateAsync() {
+
+    // Get data
+    var tokenFound = Request.Headers.TryGetValue("Authorization", out var token);
+    var sessionIdFound = Request.Headers.TryGetValue("x-session-id", out var sessionId);
+
+    if (!tokenFound || !sessionIdFound) {
+      return AuthenticateResult.Fail("Required headers are missing.");
+    }
+
+    Logger.LogInformation("Loaded auth data from headers for session ID: {SessionId}", sessionId);
+
+    // Verify token
+    try {
+      var res = await _yourAuthGrpcClient.AuthAsync(new V0SessionData {
+        SessionId = sessionId.ToString(),
+        Token = accessToken,
+      });
+
+      if (res is null) {
+        return AuthenticateResult.Fail("Token verification failed.");
+      }
+
+      // Create claims from the session data
+      var claims = new List&lt;Claim&gt; {
+        new(ClaimTypes.Actor, res.SessionId),
+        new(ClaimTypes.Role, "Authenticated"),
+      };
+      var identity = new ClaimsIdentity(claims, Scheme.Name);
+      var principal = new ClaimsPrincipal(identity);
+      var ticket = new AuthenticationTicket(principal, Scheme.Name);
+
+      // Return the authentication result
+      return AuthenticateResult.Success(ticket);
+    } catch (RpcException ex) {
+      if (ex.StatusCode == StatusCode.Unauthenticated) {
+        return AuthenticateResult.Fail("Invalid access token.");
+      }
+      return AuthenticateResult.Fail($"Something went wrong while verifying the token.");
+    }
+  }
+}
+                </code>
+            </pre>
+            <p class="post-text">上記のコードでは、gRPCのメタデータから<span class="post-inline-code">session-id</span>と<span
+                    class="post-inline-code">token</span>を取得し、認証サーバーへ送信しています。認証サーバーからのレスポンスが成功であれば、認証成功として処理を続行します。</p>
+            <p class="post-text-bold">サービスのDI注入</p>
+            <p class="post-text">IServiceCollectionに以下のようにして認証用のクライアントを依存関係注入を行います。</p>
+            <pre>
+                <code>
+builder.Services.AddSingleton(sp => {
+  var channel = GrpcChannel.ForAddress("HERE_YOUR_AUTH_SERVICE_URL");
+  return new YourAuthGrpc.YourAuthGrpcClient(channel);
+});
+                </code>
+            </pre>
+            <p class="post-text">上記のコードでは、gRPCのクライアントをシングルトンとして登録しています。<span
+                    class="post-inline-code">HERE_YOUR_AUTH_SERVICE_URL</span>は、認証サーバーのURLに置き換えてください。</p>
+            <p class="post-text-bold">認証ハンドラの登録</p>
+            <p class="post-text">認証ハンドラを登録します。</p>
+            <pre>
+                <code>
+builder.Services.AddAuthentication("AuthService")
+    .AddScheme&lt;AuthenticationSchemeOptions, AuthHandler&gt;("AuthService", options => { });
+builder.Services.AddAuthorizationBuilder()
+    .AddPolicy("Authenticated", policy => policy.RequireAuthenticatedUser());
+            </code>
+            </pre>
+            <p class="post-text">上記のコードでは、認証ハンドラを<span
+                    class="post-inline-code">AuthService</span>という名前で登録しています。また、認証が成功したユーザーのみがアクセスできるポリシーを追加しています。</p>
+            <p class="post-text-bold">ミドルウェアの設定</p>
+            <p class="post-text">ミドルウェアを設定します。</p>
+            <pre>
+                <code>
+app.UseAuthentication();
+app.UseAuthorization();
+                </code>
+            </pre>
+            <p class="post-text">上記のコードでは、認証と認可のミドルウェアを追加しています。</p>
+            <p class="post-text-bold">Authorize属性の追加</p>
+            <p class="post-text">コントローラーやアクションに<span class="post-inline-code">[Authorize]</span>属性を追加します。</p>
+            <pre>
+                <code>
+[Authorize(Policy = "Authenticated")]
+public class YourGrpcServiceImpl : YourGrpcService.YourGrpcServiceBase {
+  // Your actions
+}
+                </code>
+            </pre>
+            <p class="post-text">上記のコードでは、認証が成功したユーザーのみがアクセスできるようにしています。</p>
+            <p class="post-text">これで、APIサーバーの実装は完了です。</p>
+
+            <hr class="post-divider">
+
+            <h2 id="3" class="post-subtitle">3. クライアントの実装</h2>
+            <p class="post-text">クライアントは、APIサーバーにリクエストを送信する際に、認証情報をメタデータに含める必要があります。以下は、C#のgRPCクライアントでの例です。</p>
+            <pre>
+                <code>
+var channel = GrpcChannel.ForAddress("HERE_YOUR_API_SERVICE_URL");
+var client = new YourGrpcService.YourGrpcServiceClient(channel);
+var headers = new Metadata {
+    { "Authorization": "TOKEN" },
+    { "x-session-id": "SESSION_ID" }
+};
+var response = await client.YourMethodAsync(new YourRequest { /* Your request data */ }, headers);
+                </code>
+            </pre>
+            <p class="post-text">上記のコードでは、gRPCのメタデータに<span class="post-inline-code">Authorization</span>と<span
+                    class="post-inline-code">x-session-id</span>を追加しています。<span
+                    class="post-inline-code">TOKEN</span>と<span
+                    class="post-inline-code">SESSION_ID</span>は、実際のトークンとセッションIDに置き換えてください。</p>
+            <p class="post-text">これで、クライアントの実装は完了です。</p>
+            <p class="post-text">
+                以上で、分散サービス上でのgRPC認証の実装方法について説明しました。認証サーバーとAPIサーバーを分離することで、システムの柔軟性と拡張性が向上します。ぜひ、皆さんのプロジェクトで試してみてください。
+            </p>
+        </div>
+
+        <hr class="post-divider">
+        <div class="post-footer">
+            <p class="post-footer-text">Copyright (C) 2025 KaRU3, Okumura Naofumi | <a
+                    href="https://github.com/KaRU3-dev/KaRU3-dev.github.io/issues/new" class="post-link">Send issue</a>
+            </p>
+        </div>
+    </div>
+</body>
+
+<script>
+    document.addEventListener("DOMContentLoaded", function () {
+        hljs.highlightAll();
+    });
+</script>
+
+</html>
