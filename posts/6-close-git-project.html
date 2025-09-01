@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <link rel="stylesheet"
+        href="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.11.1/build/styles/monokai.min.css">
+    <script src="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.11.1/build/highlight.min.js"></script>
+
+    <link rel="stylesheet" href="./sample.html.css">
+
+    <title>ReactをBlazorで利用する</title>
+    <link rel="icon"
+        href="https://media.githubusercontent.com/media/KaRU3-dev/KaRU3-dev.github.io/7aa1bad9e0e5cbc49dcd5bc4fa9427ef8738d553/assets/Webicon-1.png"
+        type="image/png">
+</head>
+
+<body>
+    <div class="content">
+        <div class="info">
+            <a href="/" class="back-to-home">Back to home</a>
+            <div class="post-date">2025-09-01</div>
+        </div>
+
+        <h1 class="post-title">Gitリポジトリを閉鎖的に利用する方法</h1>
+
+        <div class="post-article">
+            <p class="post-bold">目次</p>
+            <ul class="post-toc">
+                <li><a href="#1" class="post-link">はじめに</a></li>
+                <li><a href="#2" class="post-link">開発者サイドセットアップ</a></li>
+                <li><a href="#3" class="post-link">管理者サイドセットアップ</a></li>
+                <li><a href="#4" class="post-link">セットアップ完了後の利用の手順</a></li>
+                <li><a href="#5" class="post-link">まとめ</a></li>
+            </ul>
+
+            <hr class="post-divider">
+
+            <h2 id="1" class="post-subtitle">1. はじめに</h2>
+            <p class="post-text">
+                この記事では、Gitリポジトリを閉鎖的に利用する方法について説明します。Gitは分散型バージョン管理システムであり、通常はリポジトリをクローンしてローカルで作業しますが、特定の状況ではリポジトリを閉鎖的に管理したい場合があります。例えば、企業内でのコード共有や特定のプロジェクトでのアクセス制限などです。
+                この記事では、Gitの基本的な概念を理解していることを前提として説明を進めます。
+            </p>
+            <p class="post-text">
+                それでは、始めましょう。
+            </p>
+
+            <hr class="post-divider">
+
+            <h2 id="2" class="post-subtitle">2. 開発者サイドセットアップ</h2>
+            <p class="post-text">
+                開発者サイドでは、以下の手順でセットアップを行います。
+            </p>
+            <ol class="post-numbered-list">
+                <li>
+                    <p class="post-text-bold">それぞれの開発者は、SSHキーを生成します。</p>
+                    <pre>
+                        <code>ssh-keygen -t rsa -b 4096 -C "your@email.com -N "IF_NEED_PASSPHRASE" -f ~/.ssh/id_rsa</code>
+                    </pre>
+                </li>
+                <li>
+                    <p class="post-text-bold">生成された公開鍵（id_rsa.pub）を管理者に送信します。</p>
+                </li>
+            </ol>
+
+            <hr class="post-divider">
+
+            <h2 id="3" class="post-subtitle">3. 管理者サイドセットアップ</h2>
+            <p class="post-text">
+                管理者サイドでは、以下の手順でセットアップを行います。
+            </p>
+            <ol class="post-numbered-list">
+                <li>
+                    <p class="post-text-bold">Linux（リポジトリを置くサーバー）上でユーザーとグループを作成します。</p>
+                    <ol class="post-numbered-list">
+                        <li>
+                            <p class="post-text-bold">ユーザーグループを作成します。</p>
+                            <pre>
+                                <code>sudo groupadd &lt;TEAM_NAME&gt;</code>
+                            </pre>
+                        </li>
+                        <li>
+                            <p class="post-text-bold">ユーザーを作成し、グループに追加します。</p>
+                            <pre>
+                                <code>sudo useradd -m -s $(which git-shell) -g &lt;TEAM_NAME&gt; &lt;USER_NAME&gt;</code>
+                            </pre>
+                            <div class="post-tips-note">
+                                <h2 class="post-tips-title">NOTE</h2>
+                                <p class="post-tips-text">ここでは、ユーザーがSSH接続した際に<span
+                                        class="post-inline-code">git-shell</span>でログインするように設定していますが、状況に応じて変更してください。</p>
+                            </div>
+                        </li>
+                        <li>
+                            <p class="post-text-bold">作成したユーザーに共有された<span
+                                    class="post-inline-code">id_rsa.pub</span>を登録します。</p>
+                            <ol class="post-numbered-list">
+                                <li>
+                                    <p class="post-text"><span class="post-inline-code">.ssh</span>ディレクトリを作成します。</p>
+                                    <pre>
+                                        <code>sudo mkdir /home/&lt;USER_NAME&gt;/.ssh</code>
+                                    </pre>
+                                </li>
+                                <li>
+                                    <p class="post-text">公開鍵を<span
+                                            class="post-inline-code">authorized_keys</span>に追加します。</p>
+                                    <pre>
+                                        <code>sudo echo "&lt;PASTED_PUBLIC_KEY&gt;" | sudo tee -a /home/&lt;USER_NAME&gt;/.ssh/authorized_keys</code>
+                                    </pre>
+                                </li>
+                                <li>
+                                    <p class="post-text">ディレクトリとファイルの権限を設定します。</p>
+                                    <pre>
+                                        <code>sudo chown -R &lt;USER_NAME&gt;:&lt;TEAM_NAME&gt; /home/&lt;USER_NAME&gt;/.ssh
+sudo chmod 700 /home/&lt;USER_NAME&gt;/.ssh
+sudo chmod 600 /home/&lt;USER_NAME&gt;/.ssh/authorized_keys</code>
+                                    </pre>
+                                </li>
+                            </ol>
+                        </li>
+                        <li>
+                            <p class="post-text-bold">リポジトリを作成します。</p>
+                            <pre>
+                                <code>sudo mkdir -p /path/to/git-dir/&lt;TEAM_NAME&gt;/&lt;REPO_NAME&gt;.git
+sudo chown -R &lt;USER_NAME&gt;:&lt;TEAM_NAME&gt; /path/to/git-dir/&lt;TEAM_NAME&gt;/&lt;REPO_NAME&gt;.git
+sudo chmod -R 770 /path/to/git-dir/&lt;TEAM_NAME&gt;/&lt;REPO_NAME&gt;.git
+sudo -u &lt;USER_NAME&gt; git init --bare /path/to/git-dir/&lt;TEAM_NAME&gt;/&lt;REPO_NAME&gt;.git</code>
+                            </pre>
+                        </li>
+                    </ol>
+                </li>
+            </ol>
+
+            <hr class="post-divider">
+
+            <h2 id="4" class="post-subtitle">4. セットアップ完了後の利用の手順</h2>
+            <p class="post-text">
+                セットアップが完了したら、開発者は以下の手順でリポジトリを利用できます。
+            </p>
+            <ol class="post-numbered-list">
+                <li>
+                    <p class="post-text-bold">リポジトリをクローンします。</p>
+                    <pre>
+                        <code>git clone ssh://&lt;USER_NAME&gt;@&lt;SERVER_IP&gt;:/path/to/git-dir/&lt;TEAM_NAME&gt;/&lt;REPO_NAME&gt;.git</code>
+                    </pre>
+                </li>
+                <li>
+                    <p class="post-text-bold">通常のGit操作を行います（例：add、commit、push、pullなど）。</p>
+                </li>
+                <li>
+                    <p class="post-text-bold">作業が完了したら、リポジトリをプッシュします。</p>
+                    <pre>
+                        <code>git push origin main</code>
+                    </pre>
+                </li>
+            </ol>
+
+            <hr class="post-divider">
+
+            <h2 id="5" class="post-subtitle">5. まとめ</h2>
+            <p class="post-text">
+                この記事では、Gitリポジトリを閉鎖的に利用する方法について説明しました。開発者と管理者の両方のセットアップ手順を紹介しました。これにより、特定のチームやプロジェクトでのコード共有がより安全かつ効率的に行えるようになります。Gitの強力な機能を活用しつつ、アクセス制限を適切に管理することで、プロジェクトの成功に貢献できるでしょう。
+            </p>
+            <p class="post-text">
+                それでは、良いコーディングを！
+            </p>
+        </div>
+
+        <hr class="post-divider">
+        <div class="post-footer">
+            <p class="post-footer-text">Copyright (C) 2025 KaRU3, Okumura Naofumi | <a
+                    href="https://github.com/KaRU3-dev/KaRU3-dev.github.io/issues/new" class="post-link">Send
+                    issue</a>
+            </p>
+        </div>
+    </div>
+</body>
+
+<script>
+    document.addEventListener("DOMContentLoaded", function () {
+        hljs.highlightAll();
+    });
+</script>
+
+</html>

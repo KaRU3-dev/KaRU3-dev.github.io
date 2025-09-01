@@ -28,6 +28,12 @@ const data = [
         "post-short": "BlazorアプリケーションでReactコンポーネントを使用する方法を紹介しています。",
         "link": "./posts/5-blazor-with-react.html",
         "created-at": "2025-08-24",
+    },
+    {
+        "post-name": "Gitリポジトリを閉鎖的に利用する",
+        "post-short": "Gitリポジトリを組織内でのみ利用できるようにする方法を紹介しています。",
+        "link": "./posts/6-close-git-project.html",
+        "created-at": "2025-09-01",
     }
 ];
 
